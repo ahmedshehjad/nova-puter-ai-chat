@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Nova AI Chat",
+  "short_name": "Nova",
+  "description": "A fast, beautiful AI chat assistant powered by Puter.js.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101116",
+  "theme_color": "#101116",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"},
+    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"maskable"}
+  ]
+}
