@@ -1,5 +1,5 @@
 /* Nova AI Chat service worker: cache the app shell for offline loading. */
-const CACHE_NAME = 'nova-ai-chat-shell-v9';
+const CACHE_NAME = 'nova-ai-chat-shell-v10';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg'];
 
 self.addEventListener('install', event => {
