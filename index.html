@@ -134,7 +134,7 @@
             :String(m.content??'');
           return '['+m.role.toUpperCase()+']\\n'+content;
         }).join('\\n\\n');
-        result=await puter.ai.chat(transcript,imageInputs,options);
+        result=await puter.ai.chat(transcript,imageInputs,false,options);
       }else{
         result=await puter.ai.chat(messages,options);
       }
