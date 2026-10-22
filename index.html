@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#101116">
+<meta name="description" content="Nova AI Chat — a fast, beautiful AI chat assistant powered by Puter.js.">
+<meta name="application-name" content="Nova AI Chat">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nova AI Chat">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+
 <title>Nova — AI Chat</title>
 <style>
 :root{color-scheme:dark;--bg:#101116;--panel:#17181f;--panel2:#20212a;--line:#2b2d38;--text:#f4f4f7;--muted:#a0a2b2;--accent:#a78bfa;--accent2:#7c3aed;--user:#29223a}
@@ -156,6 +165,13 @@
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();newChat()}if(e.key==='Escape'){$('modalRoot').innerHTML='';$('sidebar').classList.remove('open')}});
   renderHistory();renderChat();$('sendBtn').disabled=true;
 })();
+</script>
+
+<script>
+// Register Nova's service worker when served from HTTPS or localhost.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Nova offline support unavailable:', err)));
+}
 </script>
 </body>
 </html>
