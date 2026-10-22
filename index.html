@@ -134,7 +134,7 @@
         return;
       }
       const systemPrompt=isAndroidMode
-        ?settings.system+'\\n\\nYou are Nova Android Studio, a senior Android app development specialist. Prioritize production-ready Android apps. Ask whether the user prefers Kotlin with Jetpack Compose or Java/XML when unclear. Provide complete, compilable code, project/file paths, Gradle dependencies, AndroidManifest permissions, setup steps, debugging guidance, and secure modern Android best practices. Do not claim to have built or tested an APK unless actually done.'
+        ?settings.system+'\n\nYou are Nova Android Studio, a senior Android app development specialist. Prioritize production-ready Android apps. Ask whether the user prefers Kotlin with Jetpack Compose or Java/XML when unclear. Provide complete, compilable code, project/file paths, Gradle dependencies, AndroidManifest permissions, setup steps, debugging guidance, and secure modern Android best practices. Do not claim to have built or tested an APK unless actually done.'
         :settings.system;
       const messages=[{role:'system',content:systemPrompt},...c.messages.filter(m=>!m.pending).map(m=>({role:m.role,content:messageContent(m)}))];
       // Send real image bytes as File objects, not just filenames or text labels.
@@ -240,7 +240,8 @@
       ]);
     }
     const allValues=[...select.options].map(o=>o.value);
-    select.value=allValues.includes(previous)?previous:allValues[0];
+    const defaultChat=popular[0]?.id;
+    select.value=allValues.includes(previous)?previous:(allValues.includes(defaultChat)?defaultChat:allValues[0]);
     $('status').textContent='Curated models';
     select.title='Choose from image generation, Android development, or popular AI assistants';
   }
