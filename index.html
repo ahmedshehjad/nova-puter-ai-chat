@@ -118,7 +118,26 @@
       if(!window.puter?.ai?.chat)throw new Error('Puter.js did not load. Check your internet connection and reload.');
       const messages=[{role:'system',content:settings.system},...c.messages.filter(m=>!m.pending).map(m=>({role:m.role,content:messageContent(m)}))];
       const model=$('model').value;
-      const result=await puter.ai.chat(messages,{model,stream:false,temperature:Number(settings.temperature)||0.7,max_tokens:Number(settings.maxTokens)||2048,signal:abortController.signal});
+      // Puter.js accepts images as the second argument to chat(). A filename or
+      // a text-only content block does not transmit the actual image bytes.
+      const imageInputs=c.messages
+        .filter(m=>!m.pending)
+        .flatMap(m=>(m.attachments||[])
+          .filter(a=>a.type&&a.type.startsWith('image/')&&typeof a.data==='string'&&a.data.startsWith('data:image/'))
+          .map(a=>a.data));
+      let result;
+      const options={model,stream:false,temperature:Number(settings.temperature)||0.7,max_tokens:Number(settings.maxTokens)||2048,signal:abortController.signal};
+      if(imageInputs.length){
+        const transcript=messages.map(m=>{
+          const content=Array.isArray(m.content)
+            ?m.content.map(p=>p.type==='text'?p.text:'').filter(Boolean).join('\\n')
+            :String(m.content??'');
+          return '['+m.role.toUpperCase()+']\\n'+content;
+        }).join('\\n\\n');
+        result=await puter.ai.chat(transcript,imageInputs,options);
+      }else{
+        result=await puter.ai.chat(messages,options);
+      }
       let answer=extractText(result);
       if(!answer)answer='I received an empty response. Please try again.';
       c.messages.pop();c.messages.push({role:'assistant',content:answer});c.updated=Date.now();save();renderChat();renderHistory()
