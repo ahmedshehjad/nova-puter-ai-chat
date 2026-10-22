@@ -226,7 +226,7 @@
   $('signInBtn').onclick=async()=>{try{if(!window.puter?.auth){toast('Puter.js is not ready yet');return}if(puter.auth.isSignedIn()){const u=await puter.auth.getUser();toast('Signed in'+(u?.username?' as '+u.username:''))}else{await puter.auth.signIn();toast('Puter sign-in completed')}}catch(e){toast(e?.message||'Sign-in cancelled')}};
   let light=false;$('themeBtn').onclick=()=>{light=!light;document.documentElement.style.colorScheme=light?'light':'dark';document.documentElement.style.setProperty('--bg',light?'#f6f5fa':'#101116');document.documentElement.style.setProperty('--panel',light?'#ffffff':'#17181f');document.documentElement.style.setProperty('--panel2',light?'#eceaf2':'#20212a');document.documentElement.style.setProperty('--line',light?'#dedbe7':'#2b2d38');document.documentElement.style.setProperty('--text',light?'#20202a':'#f4f4f7');document.documentElement.style.setProperty('--muted',light?'#666577':'#a0a2b2');$('themeBtn').textContent=light?'☾':'☼'};
   document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();newChat()}if(e.key==='Escape'){$('modalRoot').innerHTML='';$('sidebar').classList.remove('open')}});
-  renderHistory();renderChat();$('sendBtn').disabled=true;$('sendBtn').setAttribute('aria-disabled','true');
+  renderHistory();renderChat();loadModels();$('sendBtn').disabled=true;$('sendBtn').setAttribute('aria-disabled','true');
 })();
 </script>
 
