@@ -421,9 +421,7 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
     select.value=allValues.includes(previous)?previous:(allValues.includes(defaultChat)?defaultChat:allValues[0]);
     $('status').textContent='Curated models';
     select.title='Choose from popular AI assistants, image generation, or Android development';
-    // Keep Popular AI Assistants at the very top of the model picker.
-    const popularGroup=[...select.children].find(group=>group.tagName==='OPTGROUP'&&group.label==='Popular AI Assistants');
-    if(popularGroup)select.insertBefore(popularGroup,select.firstElementChild);
+    // Preserve the requested order: image generation, Android development, then popular assistants.
     renderModelPicker();
   }
   async function retryFrom(i){if(busy)return;const c=current();if(!c)return;while(c.messages.length>i)c.messages.pop();save();renderChat();const last=[...c.messages].reverse().find(m=>m.role==='user');if(last)await send(last.content)}
