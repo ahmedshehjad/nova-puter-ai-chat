@@ -136,6 +136,49 @@
     parts.push({type:'text',text:m.content});return parts;
   }
   function extractText(r){if(typeof r==='string')return r;if(typeof r?.message?.content==='string')return r.message.content;if(Array.isArray(r?.message?.content))return r.message.content.map(x=>x.text||'').join('\n');if(typeof r?.text==='string')return r.text;return ''}
+
+  // Load the live chat-model catalogue from Puter so the picker stays current.
+  async function loadModels(){
+    const select=$('model'), previous=select.value;
+    try{
+      if(!window.puter?.ai?.listModels)throw new Error('Model catalogue is not available');
+      const listed=await puter.ai.listModels();
+      if(!Array.isArray(listed)||!listed.length)throw new Error('No chat models returned');
+      const models=listed.filter(m=>m&&typeof m.id==='string'&&m.id.trim());
+      if(!models.length)throw new Error('No valid model IDs returned');
+      const preferred=['gpt-5.4-nano','gpt-5.5','claude-sonnet-4-5','gemini-2.5-flash'];
+      const byId=new Map(models.map(m=>[m.id,m]));
+      select.innerHTML='';
+      const featured=document.createElement('optgroup');featured.label='Popular models';
+      preferred.filter(id=>byId.has(id)).forEach(id=>{
+        const m=byId.get(id),o=document.createElement('option');o.value=m.id;o.textContent=(m.name||m.id)+' · '+(m.provider||'');featured.appendChild(o);
+      });
+      if(featured.children.length)select.appendChild(featured);
+      const grouped=new Map();
+      models.filter(m=>!preferred.includes(m.id)).forEach(m=>{
+        const provider=String(m.provider||'Other');
+        if(!grouped.has(provider))grouped.set(provider,[]);
+        grouped.get(provider).push(m);
+      });
+      [...grouped.keys()].sort((a,b)=>a.localeCompare(b)).forEach(provider=>{
+        const group=document.createElement('optgroup');group.label=provider+' models';
+        grouped.get(provider).sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id)).forEach(m=>{
+          const o=document.createElement('option');o.value=m.id;
+          o.textContent=(m.name||m.id)+'  —  '+m.id;
+          o.title=m.id;
+          group.appendChild(o);
+        });
+        select.appendChild(group);
+      });
+      const preferredValue=models.some(m=>m.id===previous)?previous:(models.some(m=>m.id==='gpt-5.4-nano')?'gpt-5.4-nano':models[0].id);
+      select.value=preferredValue;
+      $('status').textContent=models.length+' models';
+      select.title='Choose from '+models.length+' currently listed chat models';
+    }catch(err){
+      $('status').textContent='Model list unavailable';
+      console.warn('Nova could not load the live model catalogue; using built-in options.',err);
+    }
+  }
   async function retryFrom(i){if(busy)return;const c=current();if(!c)return;while(c.messages.length>i)c.messages.pop();save();renderChat();const last=[...c.messages].reverse().find(m=>m.role==='user');if(last)await send(last.content)}
   $('chatForm').addEventListener('submit',e=>{e.preventDefault();send()});
   $('prompt').addEventListener('input',()=>{resizeInput();$('sendBtn').disabled=busy||(!$('prompt').value.trim()&&!attached.length);$('sendBtn').setAttribute('aria-disabled',String($('sendBtn').disabled));});
