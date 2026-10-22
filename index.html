@@ -340,6 +340,26 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
   }
   function closeModelPicker(){const popup=$('modelPopup'),trigger=$('modelTrigger');popup.classList.add('hidden');trigger.setAttribute('aria-expanded','false');}
   $('modelTrigger').addEventListener('click',e=>{e.stopPropagation();$('modelPopup').classList.contains('hidden')?openModelPicker():closeModelPicker()});
+  // Mobile gesture support: swipe down on the chat screen to open the model picker,
+  // then swipe up from the lower part of the picker to dismiss it.
+  let modelSwipeStartX=0,modelSwipeStartY=0,modelSwipeOrigin=null;
+  document.addEventListener('touchstart',e=>{
+    if(!e.touches||e.touches.length!==1)return;
+    const t=e.touches[0],popup=$('modelPopup');
+    modelSwipeStartX=t.clientX;modelSwipeStartY=t.clientY;
+    modelSwipeOrigin=popup&&!popup.classList.contains('hidden')&&popup.contains(e.target)
+      ?'popup':(window.matchMedia('(max-width: 700px)').matches&&!$('sidebar').classList.contains('open')&&
+        !e.target.closest('button,input,textarea,select,a,.composer,.sidebar')&&t.clientY<((window.visualViewport?.height||window.innerHeight)*0.65)
+        ?'screen':null);
+  },{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(!modelSwipeOrigin||!e.changedTouches||!e.changedTouches.length)return;
+    const t=e.changedTouches[0],dx=t.clientX-modelSwipeStartX,dy=t.clientY-modelSwipeStartY,origin=modelSwipeOrigin;
+    modelSwipeOrigin=null;
+    if(Math.abs(dy)<65||Math.abs(dy)<Math.abs(dx)*1.25)return;
+    if(origin==='screen'&&dy>0&&$('modelPopup').classList.contains('hidden'))openModelPicker();
+    else if(origin==='popup'&&dy<0)closeModelPicker();
+  },{passive:true});
   document.addEventListener('click',e=>{if(!$('modelPicker').contains(e.target)&&!$('modelPopup').contains(e.target))closeModelPicker()});
   window.addEventListener('resize',closeModelPicker,{passive:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModelPicker()});
