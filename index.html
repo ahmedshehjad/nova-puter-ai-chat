@@ -103,7 +103,7 @@
   function appendMessage(m,i){
     const node=document.createElement('article');node.className='message '+m.role;
     const label=m.role==='user'?'You':'Nova';
-    node.innerHTML='<div class="avatar">'+(m.role==='user'?'Y':'✦')+'</div><div class="bubble"><div class="role">'+label+'</div><div class="content">'+(m.pending?'<div class="typing"><i></i><i></i><i></i></div>':basicMarkdown(m.content||''))+'</div>'+(m.role==='assistant'&&!m.pending?'<div class="msg-actions"><button data-action="copy">Copy</button><button data-action="retry">Regenerate</button></div>':'')+'</div>';
+    node.innerHTML='<div class="avatar">'+(m.role==='user'?'Y':'✦')+'</div><div class="bubble"><div class="role">'+label+'</div><div class="content">'+(m.pending?'<div class="typing"><i></i><i></i><i></i></div>':basicMarkdown(m.content||''))+'</div>'+(m.imageUrl?'<img class="generated-image" src="'+escapeHTML(m.imageUrl)+'" alt="AI-generated image" style="display:block;max-width:100%;height:auto;border-radius:12px;margin-top:12px;border:1px solid var(--line)">':'')+(m.role==='assistant'&&!m.pending?'<div class="msg-actions"><button data-action="copy">Copy</button><button data-action="retry">Regenerate</button></div>':'')+'</div>';
     node.querySelector('[data-action="copy"]')?.addEventListener('click',()=>navigator.clipboard?.writeText(m.content).then(()=>toast('Copied to clipboard')).catch(()=>toast('Clipboard permission unavailable')));
     node.querySelector('[data-action="retry"]')?.addEventListener('click',()=>retryFrom(i));
     $('messages').appendChild(node)
@@ -116,8 +116,27 @@
     const pending={role:'assistant',content:'',pending:true};c.messages.push(pending);renderChat();setBusy(true);abortController=new AbortController();
     try{
       if(!window.puter?.ai?.chat)throw new Error('Puter.js did not load. Check your internet connection and reload.');
-      const messages=[{role:'system',content:settings.system},...c.messages.filter(m=>!m.pending).map(m=>({role:m.role,content:messageContent(m)}))];
-      const model=$('model').value;
+      const selectedModel=$('model').value;
+      const isImageMode=selectedModel.startsWith('image:');
+      const isAndroidMode=selectedModel.startsWith('android:');
+      const model=(isImageMode?selectedModel.slice(6):(isAndroidMode?selectedModel.slice(8):selectedModel));
+      if(isImageMode){
+        const promptForImage=text||'Create a realistic, high-quality image based on the attached reference image.';
+        const referenceImages=files.filter(f=>f.type&&f.type.startsWith('image/')&&typeof f.data==='string').map(f=>f.data);
+        const imageOptions={model,quality:'high'};
+        if(referenceImages.length)imageOptions.input_images=referenceImages;
+        const generated=await puter.ai.txt2img(promptForImage,imageOptions);
+        const imageUrl=typeof generated==='string'?generated:(generated?.src||generated?.currentSrc||'');
+        if(!imageUrl)throw new Error('The image model returned no displayable image. Please try another image model.');
+        c.messages.pop();
+        c.messages.push({role:'assistant',content:'Image generated successfully.',imageUrl});
+        c.updated=Date.now();save();renderChat();renderHistory();
+        return;
+      }
+      const systemPrompt=isAndroidMode
+        ?settings.system+'\\n\\nYou are Nova Android Studio, a senior Android app development specialist. Prioritize production-ready Android apps. Ask whether the user prefers Kotlin with Jetpack Compose or Java/XML when unclear. Provide complete, compilable code, project/file paths, Gradle dependencies, AndroidManifest permissions, setup steps, debugging guidance, and secure modern Android best practices. Do not claim to have built or tested an APK unless actually done.'
+        :settings.system;
+      const messages=[{role:'system',content:systemPrompt},...c.messages.filter(m=>!m.pending).map(m=>({role:m.role,content:messageContent(m)}))];
       // Send real image bytes as File objects, not just filenames or text labels.
       const imageInputs=c.messages
         .filter(m=>!m.pending)
@@ -168,47 +187,62 @@
   }
   function extractText(r){if(typeof r==='string')return r;if(typeof r?.message?.content==='string')return r.message.content;if(Array.isArray(r?.message?.content))return r.message.content.map(x=>x.text||'').join('\n');if(typeof r?.text==='string')return r.text;return ''}
 
-  // Load the live chat-model catalogue from Puter so the picker stays current.
+  // Keep the picker curated: 3 image models, 3 Android-focused modes, and a short popular chat list.
   async function loadModels(){
     const select=$('model'), previous=select.value;
+    let models=[];
     try{
-      if(!window.puter?.ai?.listModels)throw new Error('Model catalogue is not available');
-      const listed=await puter.ai.listModels();
-      if(!Array.isArray(listed)||!listed.length)throw new Error('No chat models returned');
-      const models=listed.filter(m=>m&&typeof m.id==='string'&&m.id.trim());
-      if(!models.length)throw new Error('No valid model IDs returned');
-      const preferred=['gpt-5.4-nano','gpt-5.5','claude-sonnet-4-5','gemini-2.5-flash'];
-      const byId=new Map(models.map(m=>[m.id,m]));
-      select.innerHTML='';
-      const featured=document.createElement('optgroup');featured.label='Popular models';
-      preferred.filter(id=>byId.has(id)).forEach(id=>{
-        const m=byId.get(id),o=document.createElement('option');o.value=m.id;o.textContent=(m.name||m.id)+' · '+(m.provider||'');featured.appendChild(o);
+      if(window.puter?.ai?.listModels){
+        const listed=await puter.ai.listModels();
+        if(Array.isArray(listed))models=listed.filter(m=>m&&typeof m.id==='string'&&m.id.trim());
+      }
+    }catch(err){console.warn('Nova model catalogue unavailable; using curated fallback IDs.',err)}
+    const byId=new Map(models.map(m=>[m.id,m]));
+    const pick=(ids)=>ids.find(id=>byId.has(id))||ids[0];
+    const labelFor=(id,fallback)=>byId.get(id)?.name||fallback||id;
+    select.innerHTML='';
+    const addGroup=(label,items)=>{
+      const group=document.createElement('optgroup');group.label=label;
+      items.forEach(item=>{
+        const option=document.createElement('option');option.value=item.value;option.textContent=item.label;group.appendChild(option);
       });
-      if(featured.children.length)select.appendChild(featured);
-      const grouped=new Map();
-      models.filter(m=>!preferred.includes(m.id)).forEach(m=>{
-        const provider=String(m.provider||'Other');
-        if(!grouped.has(provider))grouped.set(provider,[]);
-        grouped.get(provider).push(m);
-      });
-      [...grouped.keys()].sort((a,b)=>a.localeCompare(b)).forEach(provider=>{
-        const group=document.createElement('optgroup');group.label=provider+' models';
-        grouped.get(provider).sort((a,b)=>(a.name||a.id).localeCompare(b.name||b.id)).forEach(m=>{
-          const o=document.createElement('option');o.value=m.id;
-          o.textContent=(m.name||m.id)+'  —  '+m.id;
-          o.title=m.id;
-          group.appendChild(o);
-        });
-        select.appendChild(group);
-      });
-      const preferredValue=models.some(m=>m.id===previous)?previous:(models.some(m=>m.id==='gpt-5.4-nano')?'gpt-5.4-nano':models[0].id);
-      select.value=preferredValue;
-      $('status').textContent=models.length+' models';
-      select.title='Choose from '+models.length+' currently listed chat models';
-    }catch(err){
-      $('status').textContent='Model list unavailable';
-      console.warn('Nova could not load the live model catalogue; using built-in options.',err);
+      if(group.children.length)select.appendChild(group);
+    };
+    addGroup('Realistic · Advanced Image Generation',[
+      {value:'image:gpt-image-2',label:'GPT Image 2 · Photorealistic'},
+      {value:'image:gemini-3.1-flash-image',label:'Gemini Flash Image · Realistic'},
+      {value:'image:byteplus:seedream-5-0-lite-260128',label:'Seedream 5 Lite · High detail'}
+    ]);
+    const android=[
+      {id:pick(['gpt-5.5','gpt-5.4-nano']),valueLabel:'Android App Builder · GPT'},
+      {id:pick(['claude-sonnet-4-5','claude-sonnet-4']),valueLabel:'Kotlin & Jetpack Compose · Claude'},
+      {id:pick(['gemini-2.5-flash','gemini-2.5-pro']),valueLabel:'Android Debugger · Gemini'}
+    ];
+    addGroup('Android App Development',android.map((item,i)=>({
+      value:'android:'+item.id,
+      label:item.valueLabel+' · '+(byId.get(item.id)?.name||['GPT','Claude','Gemini'][i])
+    })));
+    const popular=[
+      {id:pick(['gpt-5.5','gpt-5.4-nano']),label:'ChatGPT · '+labelFor(pick(['gpt-5.5','gpt-5.4-nano']),'GPT')},
+      {id:pick(['gemini-2.5-flash','gemini-2.5-pro']),label:'Gemini · '+labelFor(pick(['gemini-2.5-flash','gemini-2.5-pro']),'Gemini')},
+      {id:pick(['claude-sonnet-4-5','claude-sonnet-4']),label:'Claude · '+labelFor(pick(['claude-sonnet-4-5','claude-sonnet-4']),'Claude')},
+      {id:pick(['deepseek-chat','deepseek-v3.1','deepseek-reasoner']),label:'DeepSeek · '+labelFor(pick(['deepseek-chat','deepseek-v3.1','deepseek-reasoner']),'DeepSeek')}
+    ];
+    const seen=new Set();
+    addGroup('Popular AI Assistants',popular.filter(item=>{
+      if(seen.has(item.id))return false;seen.add(item.id);return true;
+    }).map(item=>({value:item.id,label:item.label})));
+    if(!select.options.length){
+      addGroup('Popular AI Assistants',[
+        {value:'gpt-5.5',label:'ChatGPT · GPT-5.5'},
+        {value:'gemini-2.5-flash',label:'Gemini Flash'},
+        {value:'claude-sonnet-4-5',label:'Claude Sonnet'}
+      ]);
     }
+    const allValues=[...select.options].map(o=>o.value);
+    select.value=allValues.includes(previous)?previous:allValues[0];
+    $('status').textContent='Curated models';
+    select.title='Choose from image generation, Android development, or popular AI assistants';
   }
   async function retryFrom(i){if(busy)return;const c=current();if(!c)return;while(c.messages.length>i)c.messages.pop();save();renderChat();const last=[...c.messages].reverse().find(m=>m.role==='user');if(last)await send(last.content)}
   $('chatForm').addEventListener('submit',e=>{e.preventDefault();send()});
