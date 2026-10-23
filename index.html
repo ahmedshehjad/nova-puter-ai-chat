@@ -114,7 +114,7 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
 .model-trigger-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .model-trigger-chevron{color:#a99be0;font-size:14px;flex:none}
 .model-trigger:hover,.model-trigger[aria-expanded="true"]{border-color:#7966b4;background:#1c1a2c}
-.model-popup{position:fixed!important;z-index:2147483647!important;isolation:isolate;pointer-events:auto;left:12px;top:72px;width:300px;max-width:calc(100vw - 24px);height:auto;max-height:min(55dvh,360px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:7px;background:#0f101b;border:1px solid #62558a;border-radius:14px;box-shadow:0 18px 55px #000e,0 0 0 1px #ffffff08;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.model-popup{position:fixed!important;z-index:2147483647!important;isolation:isolate;pointer-events:auto;left:12px;top:72px;width:300px;max-width:calc(100vw - 24px);height:auto;max-height:min(55dvh,360px);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:7px;background:#0f101b;border:1px solid #62558a;border-radius:14px;box-shadow:0 18px 55px #000e,0 0 0 1px #ffffff08;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 .model-popup.hidden{display:none!important}
 .model-popup-group{padding:7px 8px 4px;color:#8f89b0;font-size:9px;font-weight:750;letter-spacing:1px;text-transform:uppercase}
 .model-popup-option{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;margin:2px 0;text-align:left;border:1px solid transparent;border-radius:9px;background:transparent;color:#d9d8eb;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
@@ -398,8 +398,8 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
   }
   function closeModelPicker(){const popup=$('modelPopup'),trigger=$('modelTrigger');popup.classList.add('hidden');trigger.setAttribute('aria-expanded','false');}
   $('modelTrigger').addEventListener('click',e=>{e.stopPropagation();$('modelPopup').classList.contains('hidden')?openModelPicker():closeModelPicker()});
-  // Mobile gesture support: swipe down on the chat screen to open the model picker,
-  // then swipe up from the lower part of the picker to dismiss it.
+  // Mobile gesture support: swipe down on the chat screen to open the model picker.
+  // Scrolling inside the picker must never dismiss it; users close it with an outside tap or Escape.
   let modelSwipeStartX=0,modelSwipeStartY=0,modelSwipeOrigin=null;
   document.addEventListener('touchstart',e=>{
     if(!e.touches||e.touches.length!==1)return;
@@ -416,7 +416,6 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
     modelSwipeOrigin=null;
     if(Math.abs(dy)<65||Math.abs(dy)<Math.abs(dx)*1.25)return;
     if(origin==='screen'&&dy>0&&$('modelPopup').classList.contains('hidden'))openModelPicker();
-    else if(origin==='popup'&&dy<0)closeModelPicker();
   },{passive:true});
   document.addEventListener('click',e=>{if(!$('modelPicker').contains(e.target)&&!$('modelPopup').contains(e.target))closeModelPicker()});
   window.addEventListener('resize',closeModelPicker,{passive:true});
