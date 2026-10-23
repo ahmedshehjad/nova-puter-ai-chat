@@ -497,24 +497,7 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
   $('newChat').onclick=newChat;
   $('menuBtn').onclick=()=>setSidebarOpen(!$('sidebar').classList.contains('open'));
   $('sidebarBackdrop').onclick=()=>setSidebarOpen(false);
-  // Edge-swipe to open and swipe left to close, like the ChatGPT mobile drawer.
-  let swipeStartX=0,swipeStartY=0,swipeTracking=false;
-  document.addEventListener('touchstart',e=>{
-    if(!e.touches||e.touches.length!==1)return;
-    const t=e.touches[0],open=$('sidebar').classList.contains('open');
-    swipeStartX=t.clientX;swipeStartY=t.clientY;
-    swipeTracking=window.matchMedia('(max-width: 700px)').matches &&
-      (open || t.clientX<=28);
-  },{passive:true});
-  document.addEventListener('touchend',e=>{
-    if(!swipeTracking||!e.changedTouches||!e.changedTouches.length)return;
-    const t=e.changedTouches[0],dx=t.clientX-swipeStartX,dy=t.clientY-swipeStartY;
-    swipeTracking=false;
-    if(Math.abs(dx)<65||Math.abs(dx)<Math.abs(dy)*1.25)return;
-    const open=$('sidebar').classList.contains('open');
-    if(!open&&dx>0)setSidebarOpen(true);
-    else if(open&&dx<0)setSidebarOpen(false);
-  },{passive:true});
+  // Swipe-to-open/close gestures are intentionally disabled; use the menu button only.
   window.addEventListener('resize',()=>{if(!window.matchMedia('(max-width: 700px)').matches)$('sidebarBackdrop').classList.remove('visible')});
   document.querySelectorAll('[data-prompt]').forEach(b=>b.onclick=()=>{ $('prompt').value=b.dataset.prompt;resizeInput();send(b.dataset.prompt)});
   $('attachBtn').onclick=()=>$('fileInput').click();
