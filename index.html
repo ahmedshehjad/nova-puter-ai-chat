@@ -404,8 +404,7 @@ body{background:radial-gradient(ellipse at 52% -25%,#29204a 0%,#10101b 35%,var(-
   // Keep scroll gestures inside the model list from bubbling into outside-dismiss handlers.
   $('modelPopup').addEventListener('pointerdown',e=>e.stopPropagation());
   $('modelPopup').addEventListener('click',e=>e.stopPropagation());
-  $('modelPopup').addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
-  $('modelPopup').addEventListener('touchmove',e=>e.stopPropagation(),{passive:true});
+  // No swipe gesture handlers are attached to the model picker; vertical scrolling is native CSS overflow only.
   document.addEventListener('click',e=>{if(!$('modelPicker').contains(e.target)&&!$('modelPopup').contains(e.target))closeModelPicker()});
   window.addEventListener('resize',closeModelPicker,{passive:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModelPicker()});
